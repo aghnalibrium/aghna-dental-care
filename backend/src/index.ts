@@ -11,6 +11,7 @@ import invoiceRoutes from './routes/invoice.routes';
 import publicRoutes from './routes/public.routes';
 import userRoutes from './routes/user.routes';
 import reviewsRoutes from './routes/reviews.routes';
+import setupRoutes from './routes/setup.routes';
 
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use('/api/invoices', invoiceRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/public', publicRoutes);
+app.use('/api/setup', setupRoutes);
 
 // Start server
 app.listen(PORT, () => {
