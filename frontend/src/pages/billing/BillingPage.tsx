@@ -80,6 +80,8 @@ export function BillingPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [_isLoading, setIsLoading] = useState(true);
+  const [_error, setError] = useState('');
   const [patients, setPatients] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({

@@ -36,18 +36,6 @@ export function ConsultationPage() {
   const [success, setSuccess] = useState(false);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
 
-  const services = [
-    'Teeth Whitening',
-    'Orthodontics',
-    'Dental Implants',
-    'Root Canal',
-    'Tooth Extraction',
-    'Dental Crown',
-    'Veneers',
-    'Scaling',
-    'Konsultasi Umum'
-  ];
-
   const timeSlots = [
     '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'
   ];
