@@ -10,12 +10,6 @@ export function Logo({ size = 'md', showText = true }: LogoProps) {
     lg: 'h-20',
   };
 
-  const textSizes = {
-    sm: 'text-base',
-    md: 'text-xl',
-    lg: 'text-2xl',
-  };
-
   return (
     <div className="flex items-center space-x-3">
       {/* Logo Image */}

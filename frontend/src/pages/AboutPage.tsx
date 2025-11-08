@@ -5,7 +5,6 @@ import {
   Heart,
   Shield,
   Users,
-  Star,
   CheckCircle2,
   Phone,
   Clock,

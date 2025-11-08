@@ -80,8 +80,6 @@ export function BillingPage() {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [patients, setPatients] = useState<any[]>([]);
 
   const [formData, setFormData] = useState({
@@ -592,7 +590,7 @@ export function BillingPage() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {items.map((item, index) => (
+                  {items.map((item) => (
                     <div key={item.id} className="flex gap-3 items-start">
                       <div className="flex-1">
                         <select

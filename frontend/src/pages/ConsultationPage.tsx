@@ -81,7 +81,7 @@ export function ConsultationPage() {
         setSuccess(true);
 
         // Format pesan WhatsApp
-        const whatsappMessage = `Halo Aghna Dental Care,\n\nSaya ingin membuat reservasi:\n\nNama: ${formData.name}\nEmail: ${formData.email}\nTelepon: ${formData.phone}\nLayanan: ${formData.service}\nTanggal: ${formData.date}\nWaktu: ${formData.time}\nPesan: ${formData.message}`;
+        const whatsappMessage = `Halo Aghna Dental Care,\n\nSaya ingin membuat reservasi:\n\nNama: ${formData.name}\nEmail: ${formData.email}\nTelepon: ${formData.phone}\nLayanan: ${formData.medicalServices}\nTanggal: ${formData.date}\nWaktu: ${formData.time}\nPesan: ${formData.message}`;
 
         const whatsappUrl = `https://wa.me/6285769382624?text=${encodeURIComponent(whatsappMessage)}`;
 
@@ -94,7 +94,6 @@ export function ConsultationPage() {
             name: '',
             email: '',
             phone: '',
-            service: '',
             date: '',
             time: '',
             medicalServices: '',
@@ -208,28 +207,6 @@ export function ConsultationPage() {
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
                   placeholder="08xxxxxxxxxx"
                 />
-              </div>
-
-              {/* Layanan */}
-              <div>
-                <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 mb-2">
-                  <MessageSquare className="w-4 h-4 text-amber-600" />
-                  <span>Pilih Layanan</span>
-                </label>
-                <select
-                  name="service"
-                  value={formData.service}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
-                >
-                  <option value="">Pilih layanan yang diinginkan</option>
-                  {services.map((service) => (
-                    <option key={service} value={service}>
-                      {service}
-                    </option>
-                  ))}
-                </select>
               </div>
 
               {/* Tanggal */}

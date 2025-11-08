@@ -36,8 +36,6 @@ export function MedicalRecordsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     patientId: '',
     diagnosis: '',
