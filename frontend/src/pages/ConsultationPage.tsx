@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, User, Mail, Phone, MessageSquare, ArrowLeft } from 'lucide-react';
-import axios from 'axios';
+import { api } from '../lib/api';
 
 const medicalServicesList = [
   'Teeth Whitening',
@@ -62,8 +62,7 @@ export function ConsultationPage() {
         ...formData,
         medicalServices: selectedServices.join(', ')
       };
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-      const response = await axios.post(`${API_URL}/public/reservations`, dataToSubmit);
+      const response = await api.post('/public/reservations', dataToSubmit);
 
       if (response.status === 201) {
         setSuccess(true);
