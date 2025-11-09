@@ -57,10 +57,15 @@ export function ConsultationPage() {
     setSuccess(false);
 
     try {
-      // Kirim data ke API backend dengan medicalServices dari selectedServices
+      // Kirim data ke API backend dengan service dan medicalServices dari selectedServices
+      const servicesString = selectedServices.length > 0
+        ? selectedServices.join(', ')
+        : 'Konsultasi Umum';
+
       const dataToSubmit = {
         ...formData,
-        medicalServices: selectedServices.join(', ')
+        service: servicesString, // Required by backend
+        medicalServices: servicesString // Optional, for patient record
       };
       const response = await api.post('/public/reservations', dataToSubmit);
 
@@ -68,7 +73,7 @@ export function ConsultationPage() {
         setSuccess(true);
 
         // Format pesan WhatsApp
-        const whatsappMessage = `Halo Aghna Dental Care,\n\nSaya ingin membuat reservasi:\n\nNama: ${formData.name}\nEmail: ${formData.email}\nTelepon: ${formData.phone}\nLayanan: ${formData.medicalServices}\nTanggal: ${formData.date}\nWaktu: ${formData.time}\nPesan: ${formData.message}`;
+        const whatsappMessage = `Halo Aghna Dental Care,\n\nSaya ingin membuat reservasi:\n\nNama: ${formData.name}\nEmail: ${formData.email}\nTelepon: ${formData.phone}\nLayanan: ${servicesString}\nTanggal: ${formData.date}\nWaktu: ${formData.time}\nPesan: ${formData.message}`;
 
         const whatsappUrl = `https://wa.me/6285769382624?text=${encodeURIComponent(whatsappMessage)}`;
 
