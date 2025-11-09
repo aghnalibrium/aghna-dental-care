@@ -6,13 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
 // User model for authentication (doctors, admin, receptionist)
 model User {
-  id        String   @id @default(uuid())
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
   email     String   @unique
   password  String
   name      String
@@ -36,7 +36,7 @@ enum UserRole {
 
 // Patient model
 model Patient {
-  id              String    @id @default(uuid())
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
   firstName       String
   lastName        String
   dateOfBirth     DateTime
@@ -67,9 +67,9 @@ enum Gender {
 
 // Appointment model
 model Appointment {
-  id          String            @id @default(uuid())
-  patientId   String
-  doctorId    String
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  patientId   String            @db.ObjectId
+  doctorId    String            @db.ObjectId
   date        DateTime
   startTime   DateTime
   endTime     DateTime
@@ -84,9 +84,6 @@ model Appointment {
   doctor      User    @relation(fields: [doctorId], references: [id])
 
   @@map("appointments")
-  @@index([patientId])
-  @@index([doctorId])
-  @@index([date])
 }
 
 enum AppointmentStatus {
@@ -100,9 +97,9 @@ enum AppointmentStatus {
 
 // Medical Record model
 model MedicalRecord {
-  id          String   @id @default(uuid())
-  patientId   String
-  doctorId    String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  patientId   String   @db.ObjectId
+  doctorId    String   @db.ObjectId
   date        DateTime @default(now())
   diagnosis   String
   symptoms    String?
@@ -118,14 +115,12 @@ model MedicalRecord {
   treatments  Treatment[]
 
   @@map("medical_records")
-  @@index([patientId])
-  @@index([doctorId])
 }
 
 // Treatment model (specific dental procedures)
 model Treatment {
-  id              String        @id @default(uuid())
-  medicalRecordId String
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  medicalRecordId String        @db.ObjectId
   toothNumber     String?
   procedure       String
   description     String?
@@ -139,7 +134,6 @@ model Treatment {
   medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
 
   @@map("treatments")
-  @@index([medicalRecordId])
 }
 
 enum TreatmentStatus {
@@ -151,8 +145,8 @@ enum TreatmentStatus {
 
 // Invoice/Billing model
 model Invoice {
-  id            String        @id @default(uuid())
-  patientId     String
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  patientId     String        @db.ObjectId
   invoiceNumber String        @unique
   date          DateTime      @default(now())
   dueDate       DateTime
@@ -171,8 +165,6 @@ model Invoice {
   payments      Payment[]
 
   @@map("invoices")
-  @@index([patientId])
-  @@index([invoiceNumber])
 }
 
 enum InvoiceStatus {
@@ -185,8 +177,8 @@ enum InvoiceStatus {
 
 // Invoice Items
 model InvoiceItem {
-  id          String   @id @default(uuid())
-  invoiceId   String
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId   String   @db.ObjectId
   description String
   quantity    Int      @default(1)
   unitPrice   Float
@@ -197,13 +189,12 @@ model InvoiceItem {
   invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("invoice_items")
-  @@index([invoiceId])
 }
 
 // Payment model
 model Payment {
-  id            String        @id @default(uuid())
-  invoiceId     String
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  invoiceId     String        @db.ObjectId
   amount        Float
   method        PaymentMethod
   transactionId String?
@@ -215,7 +206,6 @@ model Payment {
   invoice       Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
 
   @@map("payments")
-  @@index([invoiceId])
 }
 
 enum PaymentMethod {
