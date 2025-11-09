@@ -12,7 +12,8 @@ import {
   X,
   Trash2,
   Check,
-  Printer
+  Printer,
+  Send
 } from 'lucide-react';
 import { PrintableInvoice } from '../../components/PrintableInvoice';
 
@@ -159,6 +160,60 @@ export function BillingPage() {
         alert('Error: Tidak dapat memuat invoice untuk print. Silakan coba lagi.');
       }
     }, 200);
+  };
+
+  const handleSendToWhatsApp = (invoice: Invoice) => {
+    const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+    const remainingBalance = invoice.total - paidAmount;
+
+    // Format items list
+    const itemsList = invoice.items.map((item, idx) =>
+      `${idx + 1}. ${item.description}\n   ${item.quantity}x @ Rp ${item.unitPrice.toLocaleString('id-ID')} = Rp ${item.total.toLocaleString('id-ID')}`
+    ).join('\n');
+
+    // Format payments if any
+    let paymentsText = '';
+    if (invoice.payments.length > 0) {
+      paymentsText = '\n\n💳 *Riwayat Pembayaran:*\n' + invoice.payments.map((payment, idx) =>
+        `${idx + 1}. Rp ${payment.amount.toLocaleString('id-ID')} - ${payment.method}\n   ${new Date(payment.paidAt).toLocaleDateString('id-ID')}`
+      ).join('\n');
+    }
+
+    const message = `🦷 *INVOICE AGHNA DENTAL CARE*
+
+📄 *No. Invoice:* ${invoice.invoiceNumber}
+📅 *Tanggal:* ${new Date(invoice.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+👤 *Pasien:* ${invoice.patient.firstName} ${invoice.patient.lastName}
+
+📋 *Detail Layanan:*
+${itemsList}
+
+💰 *Ringkasan Pembayaran:*
+Subtotal: Rp ${invoice.subtotal.toLocaleString('id-ID')}
+${invoice.tax > 0 ? `Pajak: Rp ${invoice.tax.toLocaleString('id-ID')}` : ''}
+${invoice.discount > 0 ? `Diskon: -Rp ${invoice.discount.toLocaleString('id-ID')}` : ''}
+━━━━━━━━━━━━━━━━━━
+*TOTAL: Rp ${invoice.total.toLocaleString('id-ID')}*
+${paidAmount > 0 ? `Dibayar: Rp ${paidAmount.toLocaleString('id-ID')}` : ''}
+${remainingBalance > 0 ? `*Sisa: Rp ${remainingBalance.toLocaleString('id-ID')}*` : '✅ *LUNAS*'}${paymentsText}
+
+${invoice.notes ? `\n📝 *Catatan:* ${invoice.notes}` : ''}
+
+Terima kasih atas kepercayaan Anda kepada Aghna Dental Care! 🙏
+
+📍 Jl. Perumahan Griya Hinggil No.D2, Bantul, DIY
+📞 +62 857-6938-2624`;
+
+    // Remove leading 0 from phone number and add country code
+    let phone = invoice.patient.phone;
+    if (phone.startsWith('0')) {
+      phone = '62' + phone.substring(1);
+    } else if (!phone.startsWith('62')) {
+      phone = '62' + phone;
+    }
+
+    const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const addItem = () => {
@@ -502,6 +557,13 @@ export function BillingPage() {
                         title="Cetak Invoice"
                       >
                         <Printer className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleSendToWhatsApp(invoice)}
+                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                        title="Kirim ke WhatsApp"
+                      >
+                        <Send className="w-4 h-4" />
                       </button>
                       {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
                         <button
@@ -856,6 +918,24 @@ export function BillingPage() {
                   <p className="text-sm text-gray-700">{selectedInvoice.notes}</p>
                 </div>
               )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => handleSendToWhatsApp(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Send className="w-5 h-5" />
+                  Kirim ke WhatsApp
+                </button>
+                <button
+                  onClick={() => handlePrintInvoice(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Printer className="w-5 h-5" />
+                  Cetak Invoice
+                </button>
+              </div>
             </div>
           </div>
         </div>
