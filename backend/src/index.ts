@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { initDatabase } from './utils/init-database';
 
 // Import routes
 import authRoutes from './routes/auth.routes';
@@ -62,9 +63,12 @@ app.use('/api/public', publicRoutes);
 app.use('/api/setup', setupRoutes);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 http://localhost:${PORT}`);
+
+  // Initialize database with default users
+  await initDatabase();
 });
 
 export default app;
