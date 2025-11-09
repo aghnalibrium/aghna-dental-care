@@ -63,6 +63,9 @@ export const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoic
     const paidAmount = invoice.payments.reduce((sum, payment) => sum + payment.amount, 0);
     const remainingBalance = invoice.total - paidAmount;
 
+    // Get absolute URL for logo to ensure it loads in print
+    const logoUrl = `${window.location.origin}/logo.png`;
+
     return (
       <div ref={ref} className="printable-invoice bg-white p-8 max-w-4xl mx-auto">
         <style>{`
@@ -120,9 +123,15 @@ export const PrintableInvoice = React.forwardRef<HTMLDivElement, PrintableInvoic
             <div>
               <div className="mb-3">
                 <img
-                  src="/logo.png"
+                  src={logoUrl}
                   alt="Aghna Dental Care"
                   className="h-20 object-contain"
+                  crossOrigin="anonymous"
+                  onError={(e) => {
+                    // Fallback to relative path if absolute fails
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/logo.png';
+                  }}
                 />
               </div>
               <div className="text-sm text-gray-600 mt-4">
