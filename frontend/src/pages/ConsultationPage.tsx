@@ -309,8 +309,16 @@ export function ConsultationPage() {
                 disabled={loading}
                 className="w-full px-8 py-4 bg-gradient-to-r from-amber-500 to-yellow-600 text-white font-semibold rounded-xl hover:from-amber-600 hover:to-yellow-700 transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Memproses...' : 'Kirim Reservasi via WhatsApp'}
+                {loading ? 'Memproses... (Mohon tunggu hingga 60 detik)' : 'Kirim Reservasi via WhatsApp'}
               </button>
+
+              {loading && (
+                <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                  <p className="text-blue-800 text-sm text-center">
+                    ⏳ Sedang menghubungkan ke server... Proses ini mungkin memerlukan waktu hingga 60 detik jika server sedang dalam mode sleep.
+                  </p>
+                </div>
+              )}
 
               <p className="text-center text-sm text-gray-600">
                 Data Anda akan tersimpan di sistem kami dan WhatsApp akan terbuka untuk konfirmasi
