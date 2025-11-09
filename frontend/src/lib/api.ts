@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+// Auto-detect production environment
+const isProduction = window.location.hostname.includes('vercel.app') ||
+                     window.location.hostname.includes('aghna-dental-care');
+
+const API_URL = isProduction
+  ? 'https://aghna-dental-care.onrender.com/api'
+  : (import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
 export const api = axios.create({
   baseURL: API_URL,
