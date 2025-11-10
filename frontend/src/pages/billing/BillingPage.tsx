@@ -171,8 +171,8 @@ export function BillingPage() {
     const remainingBalance = invoice.total - paidAmount;
 
     // Set colors
-    const navyBlue = [0, 32, 96]; // #002060
-    const amber = [255, 191, 0]; // #FFBF00
+    const navyBlue: [number, number, number] = [0, 32, 96]; // #002060
+    const amber: [number, number, number] = [255, 191, 0]; // #FFBF00
 
     // Header with logo area
     doc.setFillColor(...navyBlue);
@@ -217,7 +217,7 @@ export function BillingPage() {
     doc.text(new Date(invoice.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 50, 72);
 
     // Status with color
-    const statusColors: Record<string, number[]> = {
+    const statusColors: Record<string, [number, number, number]> = {
       'PAID': [34, 197, 94],
       'UNPAID': [239, 68, 68],
       'PARTIALLY_PAID': [251, 191, 36],
