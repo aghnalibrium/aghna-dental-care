@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
+import html2canvas from 'html2canvas';
 import { api } from '../../lib/api';
 import {
   DollarSign,
@@ -18,7 +20,6 @@ import {
 } from 'lucide-react';
 import { PrintableInvoice } from '../../components/PrintableInvoice';
 import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 const dentalServicesList = [
   'Teeth Whitening',
@@ -165,252 +166,53 @@ export function BillingPage() {
     }, 200);
   };
 
-  const generateInvoicePDF = (invoice: Invoice) => {
-    const doc = new jsPDF();
-    const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
-    const remainingBalance = invoice.total - paidAmount;
+  const generateInvoicePDF = async (invoice: Invoice) => {
+    // Create a temporary container for rendering
+    const tempContainer = document.createElement('div');
+    tempContainer.style.position = 'absolute';
+    tempContainer.style.left = '-9999px';
+    tempContainer.style.width = '210mm';
+    tempContainer.style.background = 'white';
+    document.body.appendChild(tempContainer);
 
-    // Set colors
-    const navyBlue: [number, number, number] = [0, 32, 96]; // #002060
-    const amber: [number, number, number] = [255, 191, 0]; // #FFBF00
-
-    // Header with logo area
-    doc.setFillColor(...navyBlue);
-    doc.rect(0, 0, 210, 40, 'F');
-
-    // Clinic name
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(24);
-    doc.setFont('helvetica', 'bold');
-    doc.text('AGHNA DENTAL CARE', 105, 15, { align: 'center' });
-
-    // Clinic info
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Jl. Perumahan Griya Hinggil No.D2, Bantul, DIY', 105, 22, { align: 'center' });
-    doc.text('Telp: +62 857-6938-2624', 105, 27, { align: 'center' });
-    doc.text('Email: info@aghna-dental.com', 105, 32, { align: 'center' });
-
-    // Invoice title
-    doc.setFillColor(...amber);
-    doc.rect(0, 40, 210, 12, 'F');
-    doc.setTextColor(...navyBlue);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text('INVOICE', 105, 48, { align: 'center' });
-
-    // Invoice details
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-
-    // Left column
-    doc.setFont('helvetica', 'bold');
-    doc.text('No. Invoice:', 20, 60);
-    doc.text('Tanggal:', 20, 66);
-    doc.text('Jatuh Tempo:', 20, 72);
-    doc.text('Status:', 20, 78);
-
-    doc.setFont('helvetica', 'normal');
-    doc.text(invoice.invoiceNumber, 50, 60);
-    doc.text(new Date(invoice.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 50, 66);
-    doc.text(new Date(invoice.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 50, 72);
-
-    // Status with color
-    const statusColors: Record<string, [number, number, number]> = {
-      'PAID': [34, 197, 94],
-      'UNPAID': [239, 68, 68],
-      'PARTIALLY_PAID': [251, 191, 36],
-      'OVERDUE': [220, 38, 38],
-      'CANCELLED': [156, 163, 175]
-    };
-    const statusLabels: Record<string, string> = {
-      'PAID': 'LUNAS',
-      'UNPAID': 'BELUM DIBAYAR',
-      'PARTIALLY_PAID': 'DIBAYAR SEBAGIAN',
-      'OVERDUE': 'TERLAMBAT',
-      'CANCELLED': 'DIBATALKAN'
-    };
-    doc.setTextColor(...(statusColors[invoice.status] || [0, 0, 0]));
-    doc.setFont('helvetica', 'bold');
-    doc.text(statusLabels[invoice.status] || invoice.status, 50, 78);
-
-    // Right column - Patient info
-    doc.setTextColor(0, 0, 0);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Kepada Yth:', 120, 60);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`${invoice.patient.firstName} ${invoice.patient.lastName}`, 120, 66);
-    doc.text(`Telp: ${invoice.patient.phone}`, 120, 72);
-    if (invoice.patient.email) {
-      doc.text(`Email: ${invoice.patient.email}`, 120, 78);
-    }
-
-    // Items table
-    const tableData = invoice.items.map(item => [
-      item.description,
-      item.quantity.toString(),
-      `Rp ${item.unitPrice.toLocaleString('id-ID')}`,
-      `Rp ${item.total.toLocaleString('id-ID')}`
-    ]);
-
-    autoTable(doc, {
-      startY: 88,
-      head: [['Deskripsi Layanan', 'Qty', 'Harga Satuan', 'Total']],
-      body: tableData,
-      theme: 'striped',
-      headStyles: {
-        fillColor: navyBlue,
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        halign: 'left'
-      },
-      columnStyles: {
-        0: { cellWidth: 80 },
-        1: { cellWidth: 20, halign: 'center' },
-        2: { cellWidth: 40, halign: 'right' },
-        3: { cellWidth: 40, halign: 'right' }
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 5
-      }
+    // Render the PrintableInvoice component
+    const root = ReactDOM.createRoot(tempContainer);
+    await new Promise<void>((resolve) => {
+      root.render(<PrintableInvoice invoice={invoice} />);
+      setTimeout(resolve, 500); // Wait for rendering
     });
 
-    // Get final Y position after table
-    const finalY = (doc as any).lastAutoTable.finalY || 88;
+    // Convert HTML to canvas
+    const canvas = await html2canvas(tempContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff'
+    });
 
-    // Summary box
-    const summaryY = finalY + 10;
-    doc.setDrawColor(...navyBlue);
-    doc.setLineWidth(0.5);
-    doc.rect(120, summaryY, 70, 50);
+    // Clean up
+    root.unmount();
+    document.body.removeChild(tempContainer);
 
-    let currentY = summaryY + 8;
-    doc.setFontSize(10);
+    // Convert canvas to PDF
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
 
-    // Subtotal
-    doc.setFont('helvetica', 'normal');
-    doc.text('Subtotal:', 125, currentY);
-    doc.text(`Rp ${invoice.subtotal.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-    currentY += 7;
+    const imgWidth = 210;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    // Tax
-    if (invoice.tax > 0) {
-      doc.text('Pajak:', 125, currentY);
-      doc.text(`Rp ${invoice.tax.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-      currentY += 7;
-    }
+    pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
 
-    // Discount
-    if (invoice.discount > 0) {
-      doc.text('Diskon:', 125, currentY);
-      doc.text(`-Rp ${invoice.discount.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-      currentY += 7;
-    }
-
-    // Line separator
-    doc.setDrawColor(...navyBlue);
-    doc.line(125, currentY, 185, currentY);
-    currentY += 7;
-
-    // Total
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.text('TOTAL:', 125, currentY);
-    doc.text(`Rp ${invoice.total.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-    currentY += 7;
-
-    // Paid amount
-    if (paidAmount > 0) {
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Dibayar:', 125, currentY);
-      doc.text(`Rp ${paidAmount.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-      currentY += 7;
-
-      // Remaining
-      doc.setFont('helvetica', 'bold');
-      if (remainingBalance > 0) {
-        doc.setTextColor(239, 68, 68);
-        doc.text('Sisa:', 125, currentY);
-        doc.text(`Rp ${remainingBalance.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
-      } else {
-        doc.setTextColor(34, 197, 94);
-        doc.text('LUNAS', 155, currentY, { align: 'center' });
-      }
-    }
-
-    // Payment history
-    if (invoice.payments.length > 0) {
-      doc.setTextColor(0, 0, 0);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Riwayat Pembayaran:', 20, summaryY);
-
-      const paymentData = invoice.payments.map((payment, idx) => [
-        (idx + 1).toString(),
-        new Date(payment.paidAt).toLocaleDateString('id-ID'),
-        payment.method,
-        payment.transactionId || '-',
-        `Rp ${payment.amount.toLocaleString('id-ID')}`
-      ]);
-
-      autoTable(doc, {
-        startY: summaryY + 5,
-        head: [['No', 'Tanggal', 'Metode', 'ID Transaksi', 'Jumlah']],
-        body: paymentData,
-        theme: 'plain',
-        headStyles: {
-          fillColor: [243, 244, 246],
-          textColor: [0, 0, 0],
-          fontStyle: 'bold',
-          lineWidth: 0.1,
-          lineColor: [200, 200, 200]
-        },
-        columnStyles: {
-          0: { cellWidth: 10, halign: 'center' },
-          1: { cellWidth: 30 },
-          2: { cellWidth: 25 },
-          3: { cellWidth: 25 },
-          4: { cellWidth: 30, halign: 'right' }
-        },
-        styles: {
-          fontSize: 9,
-          cellPadding: 3
-        }
-      });
-    }
-
-    // Notes
-    if (invoice.notes) {
-      const notesY = Math.max((doc as any).lastAutoTable?.finalY || summaryY + 50, summaryY + 50) + 10;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(0, 0, 0);
-      doc.text('Catatan:', 20, notesY);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      const splitNotes = doc.splitTextToSize(invoice.notes, 170);
-      doc.text(splitNotes, 20, notesY + 6);
-    }
-
-    // Footer
-    const pageHeight = doc.internal.pageSize.height;
-    doc.setFillColor(...navyBlue);
-    doc.rect(0, pageHeight - 20, 210, 20, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Terima kasih atas kepercayaan Anda kepada Aghna Dental Care!', 105, pageHeight - 12, { align: 'center' });
-    doc.text('Dokumen ini dibuat secara elektronik dan sah tanpa tanda tangan', 105, pageHeight - 7, { align: 'center' });
-
-    return doc;
+    return pdf;
   };
 
-  const handleSendToWhatsApp = (invoice: Invoice) => {
+  const handleSendToWhatsApp = async (invoice: Invoice) => {
     // Generate PDF
-    const doc = generateInvoicePDF(invoice);
+    const doc = await generateInvoicePDF(invoice);
 
     // Save PDF with filename
     const filename = `Invoice_${invoice.invoiceNumber}_${invoice.patient.firstName}_${invoice.patient.lastName}.pdf`;
@@ -457,9 +259,9 @@ Terima kasih atas kepercayaan Anda! 🙏
     window.open(whatsappUrl, '_blank');
   };
 
-  const handleDownloadPDF = (invoice: Invoice) => {
+  const handleDownloadPDF = async (invoice: Invoice) => {
     // Generate PDF
-    const doc = generateInvoicePDF(invoice);
+    const doc = await generateInvoicePDF(invoice);
 
     // Save PDF with filename
     const filename = `Invoice_${invoice.invoiceNumber}_${invoice.patient.firstName}_${invoice.patient.lastName}.pdf`;
