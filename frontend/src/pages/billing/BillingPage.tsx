@@ -13,9 +13,12 @@ import {
   Trash2,
   Check,
   Printer,
-  Send
+  Send,
+  Download
 } from 'lucide-react';
 import { PrintableInvoice } from '../../components/PrintableInvoice';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const dentalServicesList = [
   'Teeth Whitening',
@@ -162,49 +165,281 @@ export function BillingPage() {
     }, 200);
   };
 
-  const handleSendToWhatsApp = (invoice: Invoice) => {
+  const generateInvoicePDF = (invoice: Invoice) => {
+    const doc = new jsPDF();
     const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
     const remainingBalance = invoice.total - paidAmount;
 
-    // Format items list
-    const itemsList = invoice.items.map((item, idx) =>
-      `${idx + 1}. ${item.description}\n   ${item.quantity}x @ Rp ${item.unitPrice.toLocaleString('id-ID')} = Rp ${item.total.toLocaleString('id-ID')}`
-    ).join('\n');
+    // Set colors
+    const navyBlue = [0, 32, 96]; // #002060
+    const amber = [255, 191, 0]; // #FFBF00
 
-    // Format payments if any
-    let paymentsText = '';
-    if (invoice.payments.length > 0) {
-      paymentsText = '\n\n💳 *Riwayat Pembayaran:*\n' + invoice.payments.map((payment, idx) =>
-        `${idx + 1}. Rp ${payment.amount.toLocaleString('id-ID')} - ${payment.method}\n   ${new Date(payment.paidAt).toLocaleDateString('id-ID')}`
-      ).join('\n');
+    // Header with logo area
+    doc.setFillColor(...navyBlue);
+    doc.rect(0, 0, 210, 40, 'F');
+
+    // Clinic name
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont('helvetica', 'bold');
+    doc.text('AGHNA DENTAL CARE', 105, 15, { align: 'center' });
+
+    // Clinic info
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Jl. Perumahan Griya Hinggil No.D2, Bantul, DIY', 105, 22, { align: 'center' });
+    doc.text('Telp: +62 857-6938-2624', 105, 27, { align: 'center' });
+    doc.text('Email: info@aghna-dental.com', 105, 32, { align: 'center' });
+
+    // Invoice title
+    doc.setFillColor(...amber);
+    doc.rect(0, 40, 210, 12, 'F');
+    doc.setTextColor(...navyBlue);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('INVOICE', 105, 48, { align: 'center' });
+
+    // Invoice details
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+
+    // Left column
+    doc.setFont('helvetica', 'bold');
+    doc.text('No. Invoice:', 20, 60);
+    doc.text('Tanggal:', 20, 66);
+    doc.text('Jatuh Tempo:', 20, 72);
+    doc.text('Status:', 20, 78);
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(invoice.invoiceNumber, 50, 60);
+    doc.text(new Date(invoice.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 50, 66);
+    doc.text(new Date(invoice.dueDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 50, 72);
+
+    // Status with color
+    const statusColors: Record<string, number[]> = {
+      'PAID': [34, 197, 94],
+      'UNPAID': [239, 68, 68],
+      'PARTIALLY_PAID': [251, 191, 36],
+      'OVERDUE': [220, 38, 38],
+      'CANCELLED': [156, 163, 175]
+    };
+    const statusLabels: Record<string, string> = {
+      'PAID': 'LUNAS',
+      'UNPAID': 'BELUM DIBAYAR',
+      'PARTIALLY_PAID': 'DIBAYAR SEBAGIAN',
+      'OVERDUE': 'TERLAMBAT',
+      'CANCELLED': 'DIBATALKAN'
+    };
+    doc.setTextColor(...(statusColors[invoice.status] || [0, 0, 0]));
+    doc.setFont('helvetica', 'bold');
+    doc.text(statusLabels[invoice.status] || invoice.status, 50, 78);
+
+    // Right column - Patient info
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Kepada Yth:', 120, 60);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${invoice.patient.firstName} ${invoice.patient.lastName}`, 120, 66);
+    doc.text(`Telp: ${invoice.patient.phone}`, 120, 72);
+    if (invoice.patient.email) {
+      doc.text(`Email: ${invoice.patient.email}`, 120, 78);
     }
 
+    // Items table
+    const tableData = invoice.items.map(item => [
+      item.description,
+      item.quantity.toString(),
+      `Rp ${item.unitPrice.toLocaleString('id-ID')}`,
+      `Rp ${item.total.toLocaleString('id-ID')}`
+    ]);
+
+    autoTable(doc, {
+      startY: 88,
+      head: [['Deskripsi Layanan', 'Qty', 'Harga Satuan', 'Total']],
+      body: tableData,
+      theme: 'striped',
+      headStyles: {
+        fillColor: navyBlue,
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'left'
+      },
+      columnStyles: {
+        0: { cellWidth: 80 },
+        1: { cellWidth: 20, halign: 'center' },
+        2: { cellWidth: 40, halign: 'right' },
+        3: { cellWidth: 40, halign: 'right' }
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 5
+      }
+    });
+
+    // Get final Y position after table
+    const finalY = (doc as any).lastAutoTable.finalY || 88;
+
+    // Summary box
+    const summaryY = finalY + 10;
+    doc.setDrawColor(...navyBlue);
+    doc.setLineWidth(0.5);
+    doc.rect(120, summaryY, 70, 50);
+
+    let currentY = summaryY + 8;
+    doc.setFontSize(10);
+
+    // Subtotal
+    doc.setFont('helvetica', 'normal');
+    doc.text('Subtotal:', 125, currentY);
+    doc.text(`Rp ${invoice.subtotal.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+    currentY += 7;
+
+    // Tax
+    if (invoice.tax > 0) {
+      doc.text('Pajak:', 125, currentY);
+      doc.text(`Rp ${invoice.tax.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+      currentY += 7;
+    }
+
+    // Discount
+    if (invoice.discount > 0) {
+      doc.text('Diskon:', 125, currentY);
+      doc.text(`-Rp ${invoice.discount.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+      currentY += 7;
+    }
+
+    // Line separator
+    doc.setDrawColor(...navyBlue);
+    doc.line(125, currentY, 185, currentY);
+    currentY += 7;
+
+    // Total
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('TOTAL:', 125, currentY);
+    doc.text(`Rp ${invoice.total.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+    currentY += 7;
+
+    // Paid amount
+    if (paidAmount > 0) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Dibayar:', 125, currentY);
+      doc.text(`Rp ${paidAmount.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+      currentY += 7;
+
+      // Remaining
+      doc.setFont('helvetica', 'bold');
+      if (remainingBalance > 0) {
+        doc.setTextColor(239, 68, 68);
+        doc.text('Sisa:', 125, currentY);
+        doc.text(`Rp ${remainingBalance.toLocaleString('id-ID')}`, 185, currentY, { align: 'right' });
+      } else {
+        doc.setTextColor(34, 197, 94);
+        doc.text('LUNAS', 155, currentY, { align: 'center' });
+      }
+    }
+
+    // Payment history
+    if (invoice.payments.length > 0) {
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Riwayat Pembayaran:', 20, summaryY);
+
+      const paymentData = invoice.payments.map((payment, idx) => [
+        (idx + 1).toString(),
+        new Date(payment.paidAt).toLocaleDateString('id-ID'),
+        payment.method,
+        payment.transactionId || '-',
+        `Rp ${payment.amount.toLocaleString('id-ID')}`
+      ]);
+
+      autoTable(doc, {
+        startY: summaryY + 5,
+        head: [['No', 'Tanggal', 'Metode', 'ID Transaksi', 'Jumlah']],
+        body: paymentData,
+        theme: 'plain',
+        headStyles: {
+          fillColor: [243, 244, 246],
+          textColor: [0, 0, 0],
+          fontStyle: 'bold',
+          lineWidth: 0.1,
+          lineColor: [200, 200, 200]
+        },
+        columnStyles: {
+          0: { cellWidth: 10, halign: 'center' },
+          1: { cellWidth: 30 },
+          2: { cellWidth: 25 },
+          3: { cellWidth: 25 },
+          4: { cellWidth: 30, halign: 'right' }
+        },
+        styles: {
+          fontSize: 9,
+          cellPadding: 3
+        }
+      });
+    }
+
+    // Notes
+    if (invoice.notes) {
+      const notesY = Math.max((doc as any).lastAutoTable?.finalY || summaryY + 50, summaryY + 50) + 10;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(0, 0, 0);
+      doc.text('Catatan:', 20, notesY);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      const splitNotes = doc.splitTextToSize(invoice.notes, 170);
+      doc.text(splitNotes, 20, notesY + 6);
+    }
+
+    // Footer
+    const pageHeight = doc.internal.pageSize.height;
+    doc.setFillColor(...navyBlue);
+    doc.rect(0, pageHeight - 20, 210, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Terima kasih atas kepercayaan Anda kepada Aghna Dental Care!', 105, pageHeight - 12, { align: 'center' });
+    doc.text('Dokumen ini dibuat secara elektronik dan sah tanpa tanda tangan', 105, pageHeight - 7, { align: 'center' });
+
+    return doc;
+  };
+
+  const handleSendToWhatsApp = (invoice: Invoice) => {
+    // Generate PDF
+    const doc = generateInvoicePDF(invoice);
+
+    // Save PDF with filename
+    const filename = `Invoice_${invoice.invoiceNumber}_${invoice.patient.firstName}_${invoice.patient.lastName}.pdf`;
+    doc.save(filename);
+
+    // Calculate amounts
+    const paidAmount = invoice.payments.reduce((sum, p) => sum + p.amount, 0);
+    const remainingBalance = invoice.total - paidAmount;
+
+    // Create a simple WhatsApp message
     const message = `🦷 *INVOICE AGHNA DENTAL CARE*
 
 📄 *No. Invoice:* ${invoice.invoiceNumber}
 📅 *Tanggal:* ${new Date(invoice.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 👤 *Pasien:* ${invoice.patient.firstName} ${invoice.patient.lastName}
 
-📋 *Detail Layanan:*
-${itemsList}
+💰 *Total Tagihan:* Rp ${invoice.total.toLocaleString('id-ID')}
+${paidAmount > 0 ? `✅ Dibayar: Rp ${paidAmount.toLocaleString('id-ID')}` : ''}
+${remainingBalance > 0 ? `⚠️ Sisa: Rp ${remainingBalance.toLocaleString('id-ID')}` : '✅ *LUNAS*'}
 
-💰 *Ringkasan Pembayaran:*
-Subtotal: Rp ${invoice.subtotal.toLocaleString('id-ID')}
-${invoice.tax > 0 ? `Pajak: Rp ${invoice.tax.toLocaleString('id-ID')}` : ''}
-${invoice.discount > 0 ? `Diskon: -Rp ${invoice.discount.toLocaleString('id-ID')}` : ''}
-━━━━━━━━━━━━━━━━━━
-*TOTAL: Rp ${invoice.total.toLocaleString('id-ID')}*
-${paidAmount > 0 ? `Dibayar: Rp ${paidAmount.toLocaleString('id-ID')}` : ''}
-${remainingBalance > 0 ? `*Sisa: Rp ${remainingBalance.toLocaleString('id-ID')}*` : '✅ *LUNAS*'}${paymentsText}
+📎 *Invoice PDF telah diunduh!*
+Silakan attach file PDF yang baru saja terunduh ke chat ini.
 
-${invoice.notes ? `\n📝 *Catatan:* ${invoice.notes}` : ''}
-
-Terima kasih atas kepercayaan Anda kepada Aghna Dental Care! 🙏
+Terima kasih atas kepercayaan Anda! 🙏
 
 📍 Jl. Perumahan Griya Hinggil No.D2, Bantul, DIY
 📞 +62 857-6938-2624`;
 
-    // Remove leading 0 from phone number and add country code
+    // Format phone number
     let phone = invoice.patient.phone;
     if (phone.startsWith('0')) {
       phone = '62' + phone.substring(1);
@@ -212,8 +447,23 @@ Terima kasih atas kepercayaan Anda kepada Aghna Dental Care! 🙏
       phone = '62' + phone;
     }
 
+    // Open WhatsApp
     const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+
+    // Show notification
+    alert(`Invoice PDF "${filename}" telah diunduh!\n\nSelanjutnya:\n1. Cek folder Downloads Anda\n2. Di WhatsApp, attach file PDF tersebut\n3. Kirim ke pasien`);
+
+    // Open WhatsApp
     window.open(whatsappUrl, '_blank');
+  };
+
+  const handleDownloadPDF = (invoice: Invoice) => {
+    // Generate PDF
+    const doc = generateInvoicePDF(invoice);
+
+    // Save PDF with filename
+    const filename = `Invoice_${invoice.invoiceNumber}_${invoice.patient.firstName}_${invoice.patient.lastName}.pdf`;
+    doc.save(filename);
   };
 
   const addItem = () => {
@@ -559,9 +809,16 @@ Terima kasih atas kepercayaan Anda kepada Aghna Dental Care! 🙏
                         <Printer className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => handleDownloadPDF(invoice)}
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                        title="Download PDF"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => handleSendToWhatsApp(invoice)}
                         className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Kirim ke WhatsApp"
+                        title="Kirim ke WhatsApp (dengan PDF)"
                       >
                         <Send className="w-4 h-4" />
                       </button>
@@ -922,18 +1179,25 @@ Terima kasih atas kepercayaan Anda kepada Aghna Dental Care! 🙏
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
-                  onClick={() => handleSendToWhatsApp(selectedInvoice)}
-                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
-                >
-                  <Send className="w-5 h-5" />
-                  Kirim ke WhatsApp
-                </button>
-                <button
                   onClick={() => handlePrintInvoice(selectedInvoice)}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   <Printer className="w-5 h-5" />
-                  Cetak Invoice
+                  Cetak
+                </button>
+                <button
+                  onClick={() => handleDownloadPDF(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white font-semibold rounded-xl hover:bg-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Download className="w-5 h-5" />
+                  Download PDF
+                </button>
+                <button
+                  onClick={() => handleSendToWhatsApp(selectedInvoice)}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  <Send className="w-5 h-5" />
+                  WhatsApp
                 </button>
               </div>
             </div>
