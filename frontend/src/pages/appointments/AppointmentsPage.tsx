@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Calendar as CalendarIcon } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, X } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -35,6 +35,9 @@ export function AppointmentsPage() {
     new Date().toISOString().split('T')[0]
   );
   const [error, setError] = useState('');
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchAppointments();
@@ -52,6 +55,40 @@ export function AppointmentsPage() {
       setError(err.response?.data?.error || 'Failed to fetch appointments');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleEditClick = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingAppointment) return;
+
+    try {
+      setIsSaving(true);
+      setError('');
+      await api.put(`/appointments/${editingAppointment.id}`, editingAppointment);
+      await fetchAppointments();
+      setIsEditModalOpen(false);
+      setEditingAppointment(null);
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to update appointment');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancelAppointment = async (id: string) => {
+    if (!confirm('Are you sure you want to cancel this appointment?')) return;
+
+    try {
+      await api.put(`/appointments/${id}`, { status: 'CANCELLED' });
+      await fetchAppointments();
+    } catch (err: any) {
+      setError(err.response?.data?.error || 'Failed to cancel appointment');
     }
   };
 
@@ -175,10 +212,16 @@ export function AppointmentsPage() {
                     </div>
                   </div>
                   <div className="flex flex-col space-y-2 ml-4">
-                    <button className="px-5 py-2 text-sm font-medium text-amber-600 border border-amber-600 rounded-lg hover:bg-amber-50 transition-all duration-200">
+                    <button
+                      onClick={() => handleEditClick(appointment)}
+                      className="px-5 py-2 text-sm font-medium text-amber-600 border border-amber-600 rounded-lg hover:bg-amber-50 transition-all duration-200"
+                    >
                       Edit
                     </button>
-                    <button className="px-5 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-all duration-200">
+                    <button
+                      onClick={() => handleCancelAppointment(appointment.id)}
+                      className="px-5 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-all duration-200"
+                    >
                       Cancel
                     </button>
                   </div>
@@ -188,6 +231,181 @@ export function AppointmentsPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Modal */}
+      {isEditModalOpen && editingAppointment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-amber-500 to-yellow-600 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-white">Edit Appointment</h2>
+              <button
+                onClick={() => {
+                  setIsEditModalOpen(false);
+                  setEditingAppointment(null);
+                }}
+                className="text-white hover:text-gray-200 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateAppointment} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Patient
+                </label>
+                <input
+                  type="text"
+                  value={`${editingAppointment.patient?.firstName} ${editingAppointment.patient?.lastName}`}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-600"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Date
+                </label>
+                <input
+                  type="date"
+                  value={editingAppointment.date.split('T')[0]}
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      date: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Start Time
+                  </label>
+                  <input
+                    type="time"
+                    value={new Date(editingAppointment.startTime).toTimeString().slice(0, 5)}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const date = new Date(editingAppointment.date);
+                      date.setHours(parseInt(hours), parseInt(minutes));
+                      setEditingAppointment({
+                        ...editingAppointment,
+                        startTime: date.toISOString(),
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    End Time
+                  </label>
+                  <input
+                    type="time"
+                    value={new Date(editingAppointment.endTime).toTimeString().slice(0, 5)}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(':');
+                      const date = new Date(editingAppointment.date);
+                      date.setHours(parseInt(hours), parseInt(minutes));
+                      setEditingAppointment({
+                        ...editingAppointment,
+                        endTime: date.toISOString(),
+                      });
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status
+                </label>
+                <select
+                  value={editingAppointment.status}
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      status: e.target.value as Appointment['status'],
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  required
+                >
+                  <option value="SCHEDULED">Scheduled</option>
+                  <option value="CONFIRMED">Confirmed</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                  <option value="NO_SHOW">No Show</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Reason
+                </label>
+                <input
+                  type="text"
+                  value={editingAppointment.reason || ''}
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      reason: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="e.g., Dental checkup"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes
+                </label>
+                <textarea
+                  value={editingAppointment.notes || ''}
+                  onChange={(e) =>
+                    setEditingAppointment({
+                      ...editingAppointment,
+                      notes: e.target.value,
+                    })
+                  }
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                  placeholder="Additional notes..."
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-amber-500 to-yellow-600 text-white rounded-lg hover:from-amber-600 hover:to-yellow-700 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditModalOpen(false);
+                    setEditingAppointment(null);
+                  }}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all duration-200 font-semibold"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
