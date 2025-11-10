@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
-import { Plus, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Plus, Calendar as CalendarIcon, X, MessageCircle } from 'lucide-react';
 
 interface Appointment {
   id: string;
@@ -67,6 +67,9 @@ export function AppointmentsPage() {
     e.preventDefault();
     if (!editingAppointment) return;
 
+    const previousStatus = appointments.find(a => a.id === editingAppointment.id)?.status;
+    const isNewlyConfirmed = previousStatus !== 'CONFIRMED' && editingAppointment.status === 'CONFIRMED';
+
     try {
       setIsSaving(true);
       setError('');
@@ -74,6 +77,15 @@ export function AppointmentsPage() {
       await fetchAppointments();
       setIsEditModalOpen(false);
       setEditingAppointment(null);
+
+      // Auto-send WhatsApp notification if appointment is newly confirmed
+      if (isNewlyConfirmed) {
+        setTimeout(() => {
+          if (confirm('Appointment confirmed! Send WhatsApp notification to patient?')) {
+            sendWhatsAppNotification(editingAppointment);
+          }
+        }, 300);
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to update appointment');
     } finally {
@@ -90,6 +102,65 @@ export function AppointmentsPage() {
     } catch (err: any) {
       setError(err.response?.data?.error || 'Failed to cancel appointment');
     }
+  };
+
+  const sendWhatsAppNotification = (appointment: Appointment) => {
+    if (!appointment.patient?.phone) {
+      alert('Patient phone number not available');
+      return;
+    }
+
+    // Format phone number (remove leading 0 if exists and add country code)
+    let phoneNumber = appointment.patient.phone.replace(/\D/g, '');
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '62' + phoneNumber.substring(1);
+    } else if (!phoneNumber.startsWith('62')) {
+      phoneNumber = '62' + phoneNumber;
+    }
+
+    // Format date and time
+    const appointmentDate = new Date(appointment.date).toLocaleDateString('id-ID', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const startTime = formatTime(appointment.startTime);
+    const endTime = formatTime(appointment.endTime);
+
+    // Create WhatsApp message
+    const message = `🦷 *KONFIRMASI APPOINTMENT - AGHNA DENTAL CARE*
+
+Halo ${appointment.patient.firstName} ${appointment.patient.lastName},
+
+Appointment Anda telah *DIKONFIRMASI* ✅
+
+📅 *Tanggal:* ${appointmentDate}
+⏰ *Waktu:* ${startTime} - ${endTime}
+👨‍⚕️ *Dokter:* ${appointment.doctor?.name || 'TBA'}
+${appointment.reason ? `📋 *Keperluan:* ${appointment.reason}` : ''}
+
+📍 *Lokasi:*
+Jl. Perumahan Griya Hinggil No.D2
+Bantul, DIY
+
+📞 *Kontak:*
++62 857-6938-2624
+
+*PENTING:*
+- Harap datang 10 menit lebih awal
+- Jika berhalangan, mohon konfirmasi minimal 1 hari sebelumnya
+- Bawa kartu identitas dan hasil pemeriksaan sebelumnya (jika ada)
+
+Terima kasih! Kami tunggu kedatangan Anda. 😊
+
+---
+*Aghna Dental Care*
+_Senyum Sehat, Hidup Berkah_ 🦷✨`;
+
+    // Open WhatsApp
+    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const formatTime = (dateString: string) => {
@@ -218,6 +289,16 @@ export function AppointmentsPage() {
                     >
                       Edit
                     </button>
+                    {appointment.status === 'CONFIRMED' && (
+                      <button
+                        onClick={() => sendWhatsAppNotification(appointment)}
+                        className="flex items-center justify-center px-5 py-2 text-sm font-medium text-green-600 border border-green-600 rounded-lg hover:bg-green-50 transition-all duration-200"
+                        title="Send WhatsApp confirmation to patient"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        WhatsApp
+                      </button>
+                    )}
                     <button
                       onClick={() => handleCancelAppointment(appointment.id)}
                       className="px-5 py-2 text-sm font-medium text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-all duration-200"
