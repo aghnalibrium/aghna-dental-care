@@ -16,7 +16,10 @@ import {
   Stethoscope,
   ChevronLeft,
   ChevronRight,
-  ArrowRight
+  ArrowRight,
+  Instagram,
+  Facebook,
+  MessageCircle
 } from 'lucide-react';
 import { TestimonialsSection } from '../components/TestimonialsSection';
 
@@ -477,10 +480,34 @@ export function LandingPage() {
             </div>
             <div>
               <h4 className="font-semibold mb-4">Ikuti Kami</h4>
-              <div className="flex space-x-4 mb-6">
-                <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">Facebook</a>
-                <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">Instagram</a>
-                <a href="#" className="text-gray-400 hover:text-amber-400 transition-colors">Twitter</a>
+              <div className="flex space-x-3 mb-6">
+                <a
+                  href="https://instagram.com/aghnadentalcare"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-amber-500 transition-all duration-200 group"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                </a>
+                <a
+                  href="https://wa.me/6285769382624"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-green-500 transition-all duration-200 group"
+                  aria-label="WhatsApp"
+                >
+                  <MessageCircle className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                </a>
+                <a
+                  href="https://www.facebook.com/profile.php?id=100089328853511"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-all duration-200 group"
+                  aria-label="Facebook"
+                >
+                  <Facebook className="w-5 h-5 text-gray-400 group-hover:text-white transition-colors" />
+                </a>
               </div>
               <Link
                 to="/login"
